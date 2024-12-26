@@ -27,69 +27,6 @@
             display: inline-block;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        #inputSection { 
-            margin-top: 50px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-        }
-        .inputColumn { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px; 
-        }
-        #combinedColumn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        #salaryColumn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
-        }
-        label {
-            font-size: 1em;
-            color: #1f2937;
-            margin-bottom: 10px;
-        }
-        input[type="time"], input[type="number"] {
-            padding: 10px;
-            border: 2px solid #3b82f6;
-            border-radius: 5px;
-            outline: none;
-        }
-        button {
-            background-color: #3b82f6;
-            color: #ffffff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #2563eb;
-        }
         #clock { 
             font-size: 2em; 
             margin-bottom: 40px; 
@@ -100,11 +37,6 @@
             margin: 20px 0; 
             color: #1d4ed8;
         }
-        #summary, #totalEarnings { 
-            font-size: 1.5em; 
-            margin-top: 20px; 
-            color: #1d4ed8;
-        }
     </style>
 </head>
 <body>
@@ -113,41 +45,7 @@
     <div id="clock">0.00 NOK</div>
     <div id="timeWorked">Timer jobbet: 0 timer, 0 minutter</div>
 
-    <div id="inputSection">
-        <div class="inputColumn" id="startColumn">
-            <label for="startTime">Starttidspunkt (HH:MM): </label>
-            <input type="time" id="startTime" value="12:18">
-            <button onclick="setTimes()">Sett starttidspunkt</button>
-        </div>
-        
-        <div class="inputColumn" style="margin-bottom: 0;">
-            <label for="endTime">Sluttidspunkt (HH:MM): </label>
-            <input type="time" id="endTime" value="20:08">
-            <button onclick="setEndTime()">Sett sluttidspunkt</button>
-        </div>
-        
-        <div class="inputColumn" id="combinedColumn">
-            <div>Vaktens lengde:</div>
-            <div id="summary">0 timer, 0 minutter</div>
-            <div>Total lønn for vakten:</div>
-            <div id="totalEarnings">0.00 NOK</div>
-        </div>
-        
-        <div class="inputColumn" id="salaryColumn">
-            <label for="hourlyRate">Timelønn (NOK): </label>
-            <input type="number" id="hourlyRate" value="806.784">
-            <button onclick="setHourlyRate()">Sett timelønn</button>
-        </div>
-    </div>
-
     <script>
-        let hourlyRate = 806.784; // Timelønn i NOK
-        let salaryPerSecond = hourlyRate / 3600; // Lønn per sekund
-        let startTime = new Date();
-        let endTime = new Date();
-
-        let totalEarned = 0;
-
         async function fetchCurrentTime() {
             try {
                 let response = await fetch('https://worldtimeapi.org/api/timezone/Europe/Oslo');
@@ -161,70 +59,21 @@
 
         async function updateLiveTime() {
             let now = await fetchCurrentTime();
-            document.getElementById('liveTime').innerText = `Nåværende tid: ${now.toLocaleTimeString('no-NO')}`;
+            const ukedager = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
+            const dag = ukedager[now.getDay()];
+            const dato = now.toLocaleDateString('no-NO', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            const tid = now.toLocaleTimeString('no-NO', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('liveTime').innerText = `Nåværende tid: ${dag}, ${dato} ${tid}`;
         }
 
-        function setTimes() {
-            setStartTime();
-            setEndTime();
-        }
-
-        function setStartTime() {
-            let timeInput = document.getElementById('startTime').value.split(':');
-            startTime.setHours(parseInt(timeInput[0]), parseInt(timeInput[1]), 0);
-            calculateInitialEarnings();
-            document.getElementById('clock').innerText = totalEarned.toFixed(2) + ' NOK';
-        }
-
-        function setEndTime() {
-            let timeInput = document.getElementById('endTime').value.split(':');
-            endTime.setHours(parseInt(timeInput[0]), parseInt(timeInput[1]), 0);
-            calculateTotalEarnings();
-        }
-
-        function setHourlyRate() {
-            hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
-            salaryPerSecond = hourlyRate / 3600;
-        }
-
-        async function calculateInitialEarnings() {
-            let now = await fetchCurrentTime();
-            if (now >= startTime) {
-                let secondsWorked = (now - startTime) / 1000;
-                totalEarned = secondsWorked * salaryPerSecond;
-                updateWorkedTime(secondsWorked);
-            }
-        }
-
-        function updateWorkedTime(secondsWorked) {
-            let hoursWorked = Math.floor(secondsWorked / 3600);
-            let minutesWorked = Math.floor((secondsWorked % 3600) / 60);
-            document.getElementById('timeWorked').innerText = `Timer jobbet: ${hoursWorked} timer, ${minutesWorked} minutter`;
-        }
-
-        async function updateClock() {
-            let now = await fetchCurrentTime();
-            if (now >= startTime && now <= endTime) {
-                totalEarned += salaryPerSecond;
-                document.getElementById('clock').innerText = totalEarned.toFixed(2) + ' NOK';
-                let secondsWorked = (now - startTime) / 1000;
-                updateWorkedTime(secondsWorked);
-            }
-        }
-
-        async function calculateTotalEarnings() {
-            let now = await fetchCurrentTime();
-            if (endTime > startTime) {
-                let secondsWorked = (endTime - startTime) / 1000;
-                let totalHoursWorked = Math.floor(secondsWorked / 3600);
-                let totalMinutesWorked = Math.floor((secondsWorked % 3600) / 60);
-                let totalEarnings = secondsWorked * salaryPerSecond;
-                document.getElementById('summary').innerText = `${totalHoursWorked} timer, ${totalMinutesWorked} minutter`;
-                document.getElementById('totalEarnings').innerText = `${totalEarnings.toFixed(2)} NOK`;
-            }
-        }
-
-        setInterval(updateClock, 1000);
         setInterval(updateLiveTime, 1000); // Oppdater live klokke hvert sekund
     </script>
 </body>
