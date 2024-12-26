@@ -109,7 +109,7 @@
 </head>
 <body>
     <h1>Lønnsklokke</h1>
-    <div id="liveTime">Henter tid...</div>
+    <div id="liveTime">Henter tid og dato...</div>
     <div id="clock">0.00 NOK</div>
     <div id="timeWorked">Timer jobbet: 0 timer, 0 minutter</div>
 
@@ -161,7 +161,7 @@
 
         async function updateLiveTime() {
             let now = await fetchCurrentTime();
-            document.getElementById('liveTime').innerText = `Nåværende tid: ${now.toLocaleTimeString('no-NO')}`;
+            document.getElementById('liveTime').innerText = `Nåværende tid og dato: ${now.toLocaleTimeString('no-NO')} - ${now.toLocaleDateString('no-NO')}`;
         }
 
         function setTimes() {
@@ -220,7 +220,7 @@
                 let totalMinutesWorked = Math.floor((secondsWorked % 3600) / 60);
                 let totalEarnings = secondsWorked * salaryPerSecond;
                 document.getElementById('summary').innerText = `${totalHoursWorked} timer, ${totalMinutesWorked} minutter`;
-                document.getElementById('totalEarnings').innerText = `${totalEarnings.toFixed(2)} NOK`;
+                document.getElementById('totalEarnings').innerText = `${totalEarnings.toFixed(2)} NOK
             }
         }
 
