@@ -202,13 +202,23 @@
             document.getElementById('timeWorked').innerText = `Timer jobbet: ${hoursWorked} timer, ${minutesWorked} minutter`;
         }
 
-        async function updateClock() {
-            let now = await fetchCurrentTime();
-            if (now >= startTime && now <= endTime) {
-                totalEarned += salaryPerSecond;
-                document.getElementById('clock').innerText = totalEarned.toFixed(2) + ' NOK';
-                let secondsWorked = (now - startTime) / 1000;
-                updateWorkedTime(secondsWorked);
+        async function fetchCurrentTime() {
+  try {
+    let response = await fetch('https://worldtimeapi.org/api/timezone/Europe/Oslo');
+    let data = await response.json();
+    return new Date(data.datetime);
+  } catch (error) {
+    console.error('Feil ved henting av tid:', error);
+    return new Date(); // Fallback til lokal tid
+  }
+}
+
+async function updateLiveTime() {
+  let now = await fetchCurrentTime();
+  document.getElementById('liveTime').innerText = `Nåværende tid: ${now.toLocaleString('no-NO', { date: 'short', time: 'short' })}`;
+}
+
+setInterval(updateLiveTime, 1000); // Oppdater live klokke hvert sekund
             }
         }
 
