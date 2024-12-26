@@ -16,6 +16,17 @@
             color: #3b82f6;
             margin-bottom: 20px;
         }
+        #liveTime {
+            font-size: 1.5em;
+            color: #1d4ed8;
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
         #inputSection { 
             margin-top: 50px; 
             display: flex; 
@@ -98,19 +109,20 @@
 </head>
 <body>
     <h1>Lønnsklokke</h1>
+    <div id="liveTime">Henter tid...</div>
     <div id="clock">0.00 NOK</div>
     <div id="timeWorked">Timer jobbet: 0 timer, 0 minutter</div>
 
     <div id="inputSection">
         <div class="inputColumn" id="startColumn">
             <label for="startTime">Starttidspunkt (HH:MM): </label>
-            <input type="time" id="startTime" value="14:23">
+            <input type="time" id="startTime" value="12:18">
             <button onclick="setTimes()">Sett starttidspunkt</button>
         </div>
         
         <div class="inputColumn" style="margin-bottom: 0;">
             <label for="endTime">Sluttidspunkt (HH:MM): </label>
-            <input type="time" id="endTime" value="23:41">
+            <input type="time" id="endTime" value="20:08">
             <button onclick="setEndTime()">Sett sluttidspunkt</button>
         </div>
         
@@ -136,6 +148,22 @@
 
         let totalEarned = 0;
 
+        async function fetchCurrentTime() {
+            try {
+                let response = await fetch('https://worldtimeapi.org/api/timezone/Europe/Oslo');
+                let data = await response.json();
+                return new Date(data.datetime);
+            } catch (error) {
+                console.error('Feil ved henting av tid:', error);
+                return new Date(); // Fallback til lokal tid
+            }
+        }
+
+        async function updateLiveTime() {
+            let now = await fetchCurrentTime();
+            document.getElementById('liveTime').innerText = `Nåværende tid: ${now.toLocaleTimeString('no-NO')}`;
+        }
+
         function setTimes() {
             setStartTime();
             setEndTime();
@@ -157,17 +185,6 @@
         function setHourlyRate() {
             hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
             salaryPerSecond = hourlyRate / 3600;
-        }
-
-        async function fetchCurrentTime() {
-            try {
-                let response = await fetch('https://worldtimeapi.org/api/timezone/Europe/Oslo');
-                let data = await response.json();
-                return new Date(data.datetime);
-            } catch (error) {
-                console.error('Feil ved henting av tid:', error);
-                return new Date(); // Fallback til lokal tid
-            }
         }
 
         async function calculateInitialEarnings() {
@@ -208,6 +225,7 @@
         }
 
         setInterval(updateClock, 1000);
+        setInterval(updateLiveTime, 1000); // Oppdater live klokke hvert sekund
     </script>
 </body>
 </html>
