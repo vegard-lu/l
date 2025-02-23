@@ -15,7 +15,6 @@
     .active { background: #50C878; color: black; }
     .inactive { background: #D22B2B; color: black; }
     input { padding: 10px; margin: 5px; font-size: 1.1em; }
-    /* Enkel styling for avkrysningsboks og label */
     .checkbox-group { margin: 10px 0; }
   </style>
 </head>
@@ -48,7 +47,7 @@
     
     <div id="nightBonus" class="box inactive">kr 0 - Kveldstillegg</div>
     <div id="weekendBonus" class="box inactive">kr 0 - Helgetillegg</div>
-    <div id="holidayBonus" class="box inactive">kr 0 - Helligdagstillegg</div>
+    <div id="holidayBonus" class="box inactive">kr 0 - Helligdagstillegg (0 timer)</div>
     
     <div id="workDuration" class="box">Vakttid: 0 timer</div>
     <div id="totalEarnings" class="box">Total lønn: 0 kr</div>
@@ -56,7 +55,31 @@
   </div>
   
   <script>
-    // Oppdaterer klokkeslettet hvert sekund
+    // Hjelpefunksjon: Beregn antall minutter i intervallet [start, end] som tilfredsstiller bonusCheck
+    function computeBonusMinutes(start, end, bonusCheck) {
+      let bonusMinutes = 0;
+      let current = new Date(start);
+      while (current < end) {
+        if (bonusCheck(current)) bonusMinutes++;
+        current.setMinutes(current.getMinutes() + 1);
+      }
+      return bonusMinutes;
+    }
+    
+    // Returnerer true dersom tidspunktet kvalifiserer for kveldstillegg (20:00 - 06:00)
+    function isNightBonusMinute(time) {
+      let h = time.getHours();
+      return (h >= 20 || h < 6);
+    }
+    
+    // Returnerer true dersom tidspunktet kvalifiserer for helgetillegg (Fredag etter 17, Lørdag, Søndag, Mandag før 06)
+    function isWeekendBonusMinute(time) {
+      let d = time.getDay();
+      let h = time.getHours();
+      return ((d === 5 && h >= 17) || d === 6 || d === 0 || (d === 1 && h < 6));
+    }
+    
+    // Oppdaterer klokken hvert sekund
     function updateClock() {
       const now = new Date();
       const days = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
@@ -64,7 +87,7 @@
       updateLiveEarnings();
     }
     
-    // Live-oppdatering av "Tjent hittil" (basert på nåværende tid)
+    // Oppdaterer live-inntektene basert på nåværende tid (forenklet beregning minutt-for-minutt)
     function updateLiveEarnings() {
       const startDate = document.getElementById("startDate").value;
       const startTime = document.getElementById("startTime").value;
@@ -84,11 +107,12 @@
       const elapsedHours = (current - start) / (3600 * 1000);
       let baseEarnings = elapsedHours * baseRate;
       
-      // Enkel live-beregning for kvelds- og helgetillegg (basert på start-tidspunkt)
-      let nightBonus = (start.getHours() >= 20 || start.getHours() < 6) ? (elapsedHours * 151.27) : 0;
-      let weekendBonus = ((start.getDay() === 5 && start.getHours() >= 17) || start.getDay() === 6 || start.getDay() === 0 || (start.getDay() === 1 && start.getHours() < 6)) ? (elapsedHours * 151.27) : 0;
+      let nightMinutes = computeBonusMinutes(start, current, isNightBonusMinute);
+      let weekendMinutes = computeBonusMinutes(start, current, isWeekendBonusMinute);
+      let nightBonusTotal = (nightMinutes / 60) * 151.27;
+      let weekendBonusTotal = (weekendMinutes / 60) * 151.27;
       
-      // Helligdagstillegg live beregnes kun hvis avkrysningsboksen er huket av
+      // Enkel live-beregning for helligdagstillegg (basert på bonusperioden 06-20)
       let holidayBonusPay = 0;
       if (document.getElementById("holidayCheckbox").checked) {
         let bonusStart = new Date(start);
@@ -98,18 +122,16 @@
         if (start < bonusEnd && current > bonusStart) {
           let bonusStartTime = new Date(Math.max(start, bonusStart));
           let bonusEndTime = new Date(Math.min(current, bonusEnd));
-          let bonusTimer = (bonusEndTime - bonusStartTime) / (3600 * 1000);
-          // Ekstra 10 minutter per time gir bonus tid i timer:
-          let bonusHours = bonusTimer * (10/60);
+          let bonusHours = ((bonusEndTime - bonusStartTime) / (3600 * 1000)) * (10/60);
           holidayBonusPay = bonusHours * baseRate;
         }
       }
       
-      const earnings = baseEarnings + nightBonus + weekendBonus + holidayBonusPay;
+      const earnings = baseEarnings + nightBonusTotal + weekendBonusTotal + holidayBonusPay;
       document.getElementById("liveEarnings").textContent = `Tjent hittil: ${earnings.toFixed(2)} kr`;
     }
     
-    // Kalkulerer total lønn, bonus og regnestykke
+    // Kalkulerer total lønn og viser et detaljert regnestykke
     function calculateWage() {
       const startDate = document.getElementById("startDate").value;
       const startTime = document.getElementById("startTime").value;
@@ -128,35 +150,20 @@
       const hoursWorked = diffMs / (3600 * 1000);
       let baseEarnings = hoursWorked * baseRate;
       
-      // Kvelds- og helgetillegg (basert på starttid, slik som tidligere)
-      let nightBonusTotal = 0;
-      let weekendBonusTotal = 0;
-      let nightBonusActive = (start.getHours() >= 20 || start.getHours() < 6);
-      let weekendBonusActive = (start.getDay() === 5 && start.getHours() >= 17) || start.getDay() === 6 || start.getDay() === 0 || (start.getDay() === 1 && start.getHours() < 6);
+      // Beregn kveldstillegg ved å telle antall minutter som oppfyller night-betingelsen
+      let nightMinutes = computeBonusMinutes(start, end, isNightBonusMinute);
+      let nightBonusHours = nightMinutes / 60;
+      let nightBonusTotal = nightBonusHours * 151.27;
       
-      if (nightBonusActive) {
-        nightBonusTotal = hoursWorked * 151.27;
-        document.getElementById("nightBonus").textContent = `kr ${nightBonusTotal.toFixed(2)} - Kveldstillegg`;
-        document.getElementById("nightBonus").className = "box active";
-      } else {
-        document.getElementById("nightBonus").textContent = "kr 0 - Kveldstillegg";
-        document.getElementById("nightBonus").className = "box inactive";
-      }
+      // Beregn helgetillegg ved å telle antall minutter som oppfyller weekend-betingelsen
+      let weekendMinutes = computeBonusMinutes(start, end, isWeekendBonusMinute);
+      let weekendBonusHours = weekendMinutes / 60;
+      let weekendBonusTotal = weekendBonusHours * 151.27;
       
-      if (weekendBonusActive) {
-        weekendBonusTotal = hoursWorked * 151.27;
-        document.getElementById("weekendBonus").textContent = `kr ${weekendBonusTotal.toFixed(2)} - Helgetillegg`;
-        document.getElementById("weekendBonus").className = "box active";
-      } else {
-        document.getElementById("weekendBonus").textContent = "kr 0 - Helgetillegg";
-        document.getElementById("weekendBonus").className = "box inactive";
-      }
-      
-      // Helligdagstillegg beregnes kun hvis avkrysningsboksen er huket av
+      // Beregn helligdagstillegg dersom aktivt
       let holidayBonusHours = 0;
       let holidayBonusPay = 0;
       if (holidayActive) {
-        // Bonusperiode: 06:00 til 20:00 (bruker samme metode som i skjemaet du viste)
         let bonusStart = new Date(start);
         bonusStart.setHours(6,0,0,0);
         let bonusEnd = new Date(start);
@@ -175,31 +182,30 @@
         document.getElementById("holidayBonus").className = "box inactive";
       }
       
-      // Total effektiv arbeidstid hvis helligdagsbonus er aktiv
-      let totalArbeidstid = hoursWorked + (holidayActive ? holidayBonusHours : 0);
-      
-      // Total lønn: (effektiv arbeidstid * timelønn) + kvelds- og helgetillegg (beregnet separat)
-      // Her summerer vi bonusene direkte med basislønnen:
       let totalEarnings = baseEarnings + nightBonusTotal + weekendBonusTotal + holidayBonusPay;
+      
+      // Totalt effektiv arbeidstid (basis + ekstra helligdagstimer)
+      let totalArbeidstid = hoursWorked + (holidayActive ? holidayBonusHours : 0);
       
       document.getElementById("workDuration").textContent = `Vakttid: ${hoursWorked.toFixed(2)} timer (Basis) + ${holidayActive ? holidayBonusHours.toFixed(2) + " timer (Helligdag)" : "0 timer"}`;
       document.getElementById("totalEarnings").textContent = `Total lønn: ${totalEarnings.toFixed(2)} kr`;
+      
+      // Detaljert regnestykke
       document.getElementById("calculationBreakdown").innerHTML = 
         "Regnestykke:<br>" +
         `Basis: (${hoursWorked.toFixed(2)} timer * ${baseRate} kr) = ${baseEarnings.toFixed(2)} kr<br>` +
-        `Kveldstillegg: (${hoursWorked.toFixed(2)} timer * 151.27 kr) = ${nightBonusTotal.toFixed(2)} kr<br>` +
-        `Helgetillegg: (${hoursWorked.toFixed(2)} timer * 151.27 kr) = ${weekendBonusTotal.toFixed(2)} kr<br>` +
+        `Kveldstillegg: ((${nightMinutes} min / 60 = ${nightBonusHours.toFixed(2)} timer) * 151.27 kr) = ${nightBonusTotal.toFixed(2)} kr<br>` +
+        `Helgetillegg: ((${weekendMinutes} min / 60 = ${weekendBonusHours.toFixed(2)} timer) * 151.27 kr) = ${weekendBonusTotal.toFixed(2)} kr<br>` +
         (holidayActive 
-          ? `Helligdagstillegg: ((${bonusEndTimeString(start)} - ${bonusStartTimeString(start)}) / 1 time * (10/60)) * ${baseRate} kr = ${holidayBonusPay.toFixed(2)} kr<br>`
+          ? `Helligdagstillegg: ((${bonusEndTimeString(start)} - ${bonusStartTimeString(start)}) bonusperiode, ekstra ${holidayBonusHours.toFixed(2)} timer) * ${baseRate} kr = ${holidayBonusPay.toFixed(2)} kr<br>`
           : "") +
         `Sum: ${baseEarnings.toFixed(2)} + ${nightBonusTotal.toFixed(2)} + ${weekendBonusTotal.toFixed(2)} ${holidayActive ? "+ " + holidayBonusPay.toFixed(2) : ""} = ${totalEarnings.toFixed(2)} kr`;
       
-      // Oppdaterer også den effektive timelønnen (total lønn delt på effektiv arbeidstid)
       const effectiveHourlyRate = totalArbeidstid > 0 ? (totalEarnings / totalArbeidstid) : 0;
       document.getElementById("effectiveHourlyRate").textContent = `Effektiv timelønn: ${effectiveHourlyRate.toFixed(2)} kr`;
     }
     
-    // Hjelpefunksjoner for visning av bonusperiodens start og slutt (kun for regnestykke-visning)
+    // Hjelpefunksjoner for regnestykke-visning (helligdagstillegg)
     function bonusStartTimeString(date) {
       let d = new Date(date);
       d.setHours(6,0,0,0);
@@ -213,8 +219,6 @@
     
     // Lytter til endringer i alle inputfeltene
     document.querySelectorAll("input").forEach(input => input.addEventListener("change", calculateWage));
-    
-    // Oppdater klokken hvert sekund
     setInterval(updateClock, 1000);
   </script>
 </body>
