@@ -11,7 +11,7 @@
     #clock { font-size: 1.5em; background: #6495ED; color: white; }
     #liveEarnings { font-size: 2em; background: #50C878; color: white; }
     #effectiveHourlyRate { font-size: 1.5em; background: #6495ED; color: white; }
-    #nightBonus, #weekendBonus, #holidayBonus { font-size: 1.2em; }
+    #nightBonus, #weekendBonus, #holidayBonus, #lokalttogBonus { font-size: 1.2em; }
     .active { background: #50C878; color: black; }
     .inactive { background: #D22B2B; color: black; }
     input { padding: 10px; margin: 5px; font-size: 1.1em; }
@@ -22,7 +22,7 @@
   <h1>Lønnsklokke</h1>
   <div id="clock" class="box"></div>
   <div id="liveEarnings" class="box">Tjent hittil: 0 kr</div>
-  <div id="effectiveHourlyRate" class="box">Effektiv timelønn: 0 kr</div>
+  <div id="effectiveHourlyRate" class="box">Effektiv timelønn: 672,32 kr</div>
   
   <div class="container">
     <label for="startDate">Startdato:</label>
@@ -45,9 +45,15 @@
       <label for="holidayCheckbox">Beregn helligdagstillegg</label>
     </div>
     
+    <div class="checkbox-group">
+      <input type="checkbox" id="lokalttogCheckbox">
+      <label for="lokalttogCheckbox">Beregn lokalttog tillegg</label>
+    </div>
+    
     <div id="nightBonus" class="box inactive">kr 0 - Kveldstillegg</div>
     <div id="weekendBonus" class="box inactive">kr 0 - Helgetillegg</div>
     <div id="holidayBonus" class="box inactive">kr 0 - Helligdagstillegg (0 timer)</div>
+    <div id="lokalttogBonus" class="box inactive">kr 0 - Lokalttog tillegg</div>
     
     <div id="workDuration" class="box">Vakttid: 0 timer</div>
     <div id="totalEarnings" class="box">Total lønn: 0 kr</div>
@@ -87,7 +93,7 @@
       updateLiveEarnings();
     }
     
-    // Oppdaterer live-inntektene basert på nåværende tid (forenklet beregning minutt-for-minutt)
+    // Oppdaterer live-inntektene basert på nåværende tid
     function updateLiveEarnings() {
       const startDate = document.getElementById("startDate").value;
       const startTime = document.getElementById("startTime").value;
@@ -112,7 +118,7 @@
       let nightBonusTotal = (nightMinutes / 60) * 151.27;
       let weekendBonusTotal = (weekendMinutes / 60) * 151.27;
       
-      // Enkel live-beregning for helligdagstillegg (basert på bonusperioden 06-20)
+      // Helligdagstillegg live beregnes kun dersom avkrysningsboksen er huket av
       let holidayBonusPay = 0;
       if (document.getElementById("holidayCheckbox").checked) {
         let bonusStart = new Date(start);
@@ -127,11 +133,14 @@
         }
       }
       
-      const earnings = baseEarnings + nightBonusTotal + weekendBonusTotal + holidayBonusPay;
+      // Lokalttog tillegg gis én gang dersom avkrysningsboksen er huket av
+      let lokalttogBonus = document.getElementById("lokalttogCheckbox").checked ? 134.46 : 0;
+      
+      const earnings = baseEarnings + nightBonusTotal + weekendBonusTotal + holidayBonusPay + lokalttogBonus;
       document.getElementById("liveEarnings").textContent = `Tjent hittil: ${earnings.toFixed(2)} kr`;
     }
     
-    // Kalkulerer total lønn og viser et detaljert regnestykke
+    // Kalkulerer total lønn, bonus og viser et detaljert regnestykke
     function calculateWage() {
       const startDate = document.getElementById("startDate").value;
       const startTime = document.getElementById("startTime").value;
@@ -139,6 +148,7 @@
       const endTime = document.getElementById("endTime").value;
       let baseRate = parseFloat(document.getElementById("hourlyRate").value);
       let holidayActive = document.getElementById("holidayCheckbox").checked;
+      let lokalttogActive = document.getElementById("lokalttogCheckbox").checked;
       
       if (!startDate || !startTime || !endDate || !endTime) return;
       
@@ -150,17 +160,13 @@
       const hoursWorked = diffMs / (3600 * 1000);
       let baseEarnings = hoursWorked * baseRate;
       
-      // Beregn kveldstillegg ved å telle antall minutter som oppfyller night-betingelsen
       let nightMinutes = computeBonusMinutes(start, end, isNightBonusMinute);
-      let nightBonusHours = nightMinutes / 60;
-      let nightBonusTotal = nightBonusHours * 151.27;
-      
-      // Beregn helgetillegg ved å telle antall minutter som oppfyller weekend-betingelsen
       let weekendMinutes = computeBonusMinutes(start, end, isWeekendBonusMinute);
+      let nightBonusHours = nightMinutes / 60;
       let weekendBonusHours = weekendMinutes / 60;
+      let nightBonusTotal = nightBonusHours * 151.27;
       let weekendBonusTotal = weekendBonusHours * 151.27;
       
-      // Beregn helligdagstillegg dersom aktivt
       let holidayBonusHours = 0;
       let holidayBonusPay = 0;
       if (holidayActive) {
@@ -182,30 +188,40 @@
         document.getElementById("holidayBonus").className = "box inactive";
       }
       
-      let totalEarnings = baseEarnings + nightBonusTotal + weekendBonusTotal + holidayBonusPay;
+      let lokalttogBonus = lokalttogActive ? 134.46 : 0;
+      if (lokalttogActive) {
+        document.getElementById("lokalttogBonus").textContent = `kr ${lokalttogBonus.toFixed(2)} - Lokalttog tillegg`;
+        document.getElementById("lokalttogBonus").className = "box active";
+      } else {
+        document.getElementById("lokalttogBonus").textContent = "kr 0 - Lokalttog tillegg";
+        document.getElementById("lokalttogBonus").className = "box inactive";
+      }
       
-      // Totalt effektiv arbeidstid (basis + ekstra helligdagstimer)
+      let totalEarnings = baseEarnings + nightBonusTotal + weekendBonusTotal + holidayBonusPay + lokalttogBonus;
+      
+      // Totalt effektiv arbeidstid: basis + ekstra helligdagstimer (lokalttog tillegg gis ikke per time)
       let totalArbeidstid = hoursWorked + (holidayActive ? holidayBonusHours : 0);
       
       document.getElementById("workDuration").textContent = `Vakttid: ${hoursWorked.toFixed(2)} timer (Basis) + ${holidayActive ? holidayBonusHours.toFixed(2) + " timer (Helligdag)" : "0 timer"}`;
       document.getElementById("totalEarnings").textContent = `Total lønn: ${totalEarnings.toFixed(2)} kr`;
-      
-      // Detaljert regnestykke
       document.getElementById("calculationBreakdown").innerHTML = 
         "Regnestykke:<br>" +
         `Basis: (${hoursWorked.toFixed(2)} timer * ${baseRate} kr) = ${baseEarnings.toFixed(2)} kr<br>` +
         `Kveldstillegg: ((${nightMinutes} min / 60 = ${nightBonusHours.toFixed(2)} timer) * 151.27 kr) = ${nightBonusTotal.toFixed(2)} kr<br>` +
         `Helgetillegg: ((${weekendMinutes} min / 60 = ${weekendBonusHours.toFixed(2)} timer) * 151.27 kr) = ${weekendBonusTotal.toFixed(2)} kr<br>` +
         (holidayActive 
-          ? `Helligdagstillegg: ((${bonusEndTimeString(start)} - ${bonusStartTimeString(start)}) bonusperiode, ekstra ${holidayBonusHours.toFixed(2)} timer) * ${baseRate} kr = ${holidayBonusPay.toFixed(2)} kr<br>`
+          ? `Helligdagstillegg: (Ekstra ${holidayBonusHours.toFixed(2)} timer * ${baseRate} kr) = ${holidayBonusPay.toFixed(2)} kr<br>` 
           : "") +
-        `Sum: ${baseEarnings.toFixed(2)} + ${nightBonusTotal.toFixed(2)} + ${weekendBonusTotal.toFixed(2)} ${holidayActive ? "+ " + holidayBonusPay.toFixed(2) : ""} = ${totalEarnings.toFixed(2)} kr`;
+        (lokalttogActive 
+          ? `Lokalttog tillegg: Engangsbeløp = ${lokalttogBonus.toFixed(2)} kr<br>` 
+          : "") +
+        `Sum: ${baseEarnings.toFixed(2)} + ${nightBonusTotal.toFixed(2)} + ${weekendBonusTotal.toFixed(2)} ${holidayActive ? "+ " + holidayBonusPay.toFixed(2) : ""} ${lokalttogActive ? "+ " + lokalttogBonus.toFixed(2) : ""} = ${totalEarnings.toFixed(2)} kr`;
       
       const effectiveHourlyRate = totalArbeidstid > 0 ? (totalEarnings / totalArbeidstid) : 0;
       document.getElementById("effectiveHourlyRate").textContent = `Effektiv timelønn: ${effectiveHourlyRate.toFixed(2)} kr`;
     }
     
-    // Hjelpefunksjoner for regnestykke-visning (helligdagstillegg)
+    // Hjelpefunksjoner for visning av bonusperiodens start og slutt (kun for regnestykke-visning)
     function bonusStartTimeString(date) {
       let d = new Date(date);
       d.setHours(6,0,0,0);
