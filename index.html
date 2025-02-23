@@ -1,129 +1,184 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lønnsklokke</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #FAF9F6; }
-        .container { width: 60%; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
-        .box { margin: 10px 0; padding: 15px; border-radius: 8px; font-size: 1.2em; font-weight: bold; }
-        #clock { font-size: 1.5em; background: #6495ED; color: white; }
-        #liveEarnings { font-size: 2em; background: #50C878; color: white; }
-        #effectiveHourlyRate { font-size: 1.5em; background: #6495ED; color: white; }
-        #nightBonus, #weekendBonus { font-size: 1.2em; }
-        .active { background: #50C878; color: black; }
-        .inactive { background: #D22B2B; color: black; }
-        input { padding: 10px; margin: 5px; font-size: 1.1em; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lønnsklokke</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background-color: #FAF9F6; }
+    .container { width: 60%; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .box { margin: 10px 0; padding: 15px; border-radius: 8px; font-size: 1.2em; font-weight: bold; }
+    #clock { font-size: 1.5em; background: #6495ED; color: white; }
+    #liveEarnings { font-size: 2em; background: #50C878; color: white; }
+    #effectiveHourlyRate { font-size: 1.5em; background: #6495ED; color: white; }
+    #nightBonus, #weekendBonus { font-size: 1.2em; }
+    .active { background: #50C878; color: black; }
+    .inactive { background: #D22B2B; color: black; }
+    input { padding: 10px; margin: 5px; font-size: 1.1em; }
+  </style>
 </head>
 <body>
-    <h1>Lønnsklokke</h1>
-    <div id="clock" class="box"></div>
-    <div id="liveEarnings" class="box">Tjent hittil: 0 kr</div>
-    <div id="effectiveHourlyRate" class="box">Effektiv timelønn: 672,32 kr</div>
+  <h1>Lønnsklokke</h1>
+  <div id="clock" class="box"></div>
+  <div id="liveEarnings" class="box">Tjent hittil: 0 kr</div>
+  <div id="effectiveHourlyRate" class="box">Effektiv timelønn: 0 kr</div>
+  
+  <div class="container">
+    <label for="startDate">Startdato:</label>
+    <input type="date" id="startDate">
     
-    <div class="container">
-        <label for="startTime">Starttid:</label>
-        <input type="time" id="startTime">
-        
-        <label for="endTime">Sluttid:</label>
-        <input type="time" id="endTime">
-        
-        <label for="hourlyRate">Timelønn:</label>
-        <input type="number" id="hourlyRate" value="616">
-        
-        <div id="nightBonus" class="box inactive">Kveldstillegg av</div>
-        <div id="weekendBonus" class="box inactive">Helgetillegg av</div>
-        
-        <div id="workDuration" class="box">Vakttid: 0 timer</div>
-        <div id="totalEarnings" class="box">Total lønn: 0 kr</div>
-    </div>
+    <label for="startTime">Starttid:</label>
+    <input type="time" id="startTime">
     
-    <script>
-        let earningsPerSecond = 0;
-        let startTimestamp = null;
-        let endTimestamp = null;
-        
-        function updateClock() {
-            const now = new Date();
-            const days = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
-            const day = days[now.getDay()];
-            const time = now.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById("clock").textContent = `${day}, ${time}`;
-            
-            if (startTimestamp && now >= startTimestamp && now <= endTimestamp) {
-                let secondsWorked = Math.floor((now - startTimestamp) / 1000);
-                document.getElementById("liveEarnings").textContent = `Tjent hittil: ${(secondsWorked * earningsPerSecond).toFixed(2)} kr`;
-            }
-        }
-        
-        function calculateWage() {
-            const start = document.getElementById("startTime").value;
-            const end = document.getElementById("endTime").value;
-            let rate = parseFloat(document.getElementById("hourlyRate").value);
-            
-            if (!start || !end) return;
-            
-            const now = new Date();
-            const startTime = new Date(now);
-            const [startH, startM] = start.split(":").map(Number);
-            startTime.setHours(startH, startM, 0, 0);
-            
-            const endTime = new Date(now);
-            const [endH, endM] = end.split(":").map(Number);
-            endTime.setHours(endH, endM, 0, 0);
-            
-            if (endTime < startTime) endTime.setDate(endTime.getDate() + 1);
-            
-            const diffMs = endTime - startTime;
-            const hoursWorked = diffMs / (1000 * 60 * 60);
-            
-            let totalEarnings = hoursWorked * rate;
-            let effectiveRate = rate;
-            
-            const nowH = now.getHours();
-            const nowD = now.getDay();
-            let nightBonusActive = (nowH >= 20 || nowH < 6);
-            let weekendBonusActive = (nowD === 5 && nowH >= 17) || nowD === 6 || nowD === 0 || (nowD === 1 && nowH < 6);
-            
-            if (nightBonusActive) {
-                document.getElementById("nightBonus").textContent = "Kveldstillegg på";
-                document.getElementById("nightBonus").classList.add("active");
-                document.getElementById("nightBonus").classList.remove("inactive");
-                effectiveRate += 151.27;
-            } else {
-                document.getElementById("nightBonus").textContent = "Kveldstillegg av";
-                document.getElementById("nightBonus").classList.add("inactive");
-                document.getElementById("nightBonus").classList.remove("active");
-            }
-            
-            if (weekendBonusActive) {
-                document.getElementById("weekendBonus").textContent = "Helgetillegg på";
-                document.getElementById("weekendBonus").classList.add("active");
-                document.getElementById("weekendBonus").classList.remove("inactive");
-                effectiveRate += 151.27;
-            } else {
-                document.getElementById("weekendBonus").textContent = "Helgetillegg av";
-                document.getElementById("weekendBonus").classList.add("inactive");
-                document.getElementById("weekendBonus").classList.remove("active");
-            }
-            
-            document.getElementById("effectiveHourlyRate").textContent = `Effektiv timelønn: ${effectiveRate.toFixed(2)} kr`;
-            
-            earningsPerSecond = effectiveRate / 3600;
-            startTimestamp = startTime;
-            endTimestamp = endTime;
-            
-            document.getElementById("totalEarnings").textContent = `Total lønn: ${totalEarnings.toFixed(2)} kr`;
-            document.getElementById("workDuration").textContent = `Vakttid: ${hoursWorked.toFixed(2)} timer`;
-        }
-        
-        document.getElementById("startTime").addEventListener("change", calculateWage);
-        document.getElementById("endTime").addEventListener("change", calculateWage);
-        document.getElementById("hourlyRate").addEventListener("input", calculateWage);
-        
-        setInterval(updateClock, 1000);
-    </script>
+    <label for="endDate">Sluttdato:</label>
+    <input type="date" id="endDate">
+    
+    <label for="endTime">Sluttid:</label>
+    <input type="time" id="endTime">
+    
+    <label for="hourlyRate">Timelønn:</label>
+    <input type="number" id="hourlyRate" value="616">
+    
+    <div id="nightBonus" class="box inactive">kr 0 - Kveldstillegg</div>
+    <div id="weekendBonus" class="box inactive">kr 0 - Helgetillegg</div>
+    
+    <div id="workDuration" class="box">Vakttid: 0 timer</div>
+    <div id="totalEarnings" class="box">Total lønn: 0 kr</div>
+    <div id="calculationBreakdown" class="box">Regnestykke: </div>
+  </div>
+  
+  <script>
+    // Hjelpefunksjon: Beregn antall bonus-minutter i intervallet [start, end] for et gitt bonuskriterium
+    function computeBonusMinutes(start, end, bonusCheck) {
+      let bonusMinutes = 0;
+      let current = new Date(start);
+      while (current < end) {
+        if (bonusCheck(current)) bonusMinutes++;
+        current.setMinutes(current.getMinutes() + 1);
+      }
+      return bonusMinutes;
+    }
+    
+    // Sjekker om et gitt tidspunkt kvalifiserer for kveldstillegg
+    function isNightBonus(time) {
+      const h = time.getHours();
+      return (h >= 20 || h < 6);
+    }
+    
+    // Sjekker om et gitt tidspunkt kvalifiserer for helgetillegg
+    function isWeekendBonus(time) {
+      const d = time.getDay();
+      const h = time.getHours();
+      return ((d === 5 && h >= 17) || d === 6 || d === 0 || (d === 1 && h < 6));
+    }
+    
+    // Oppdaterer klokken og live-inntekter hvert sekund
+    function updateClock() {
+      const now = new Date();
+      const days = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
+      document.getElementById("clock").textContent = `${days[now.getDay()]}, ${now.toLocaleTimeString('no-NO')}`;
+      updateLiveEarnings();
+    }
+    
+    // Beregn og oppdater live-inntekter basert på nåværende tid
+    function updateLiveEarnings() {
+      const startDate = document.getElementById("startDate").value;
+      const startTime = document.getElementById("startTime").value;
+      const endDate = document.getElementById("endDate").value;
+      const endTime = document.getElementById("endTime").value;
+      const baseRate = parseFloat(document.getElementById("hourlyRate").value);
+      if (!startDate || !startTime || !endDate || !endTime) return;
+      
+      const start = new Date(`${startDate}T${startTime}`);
+      const end = new Date(`${endDate}T${endTime}`);
+      const now = new Date();
+      if (now < start) {
+        document.getElementById("liveEarnings").textContent = "Tjent hittil: 0 kr";
+        return;
+      }
+      const current = now > end ? end : now;
+      const elapsedHours = (current - start) / (3600 * 1000);
+      const baseEarnings = elapsedHours * baseRate;
+      
+      const nightBonusMinutes = computeBonusMinutes(start, current, isNightBonus);
+      const weekendBonusMinutes = computeBonusMinutes(start, current, isWeekendBonus);
+      const nightBonusHours = nightBonusMinutes / 60;
+      const weekendBonusHours = weekendBonusMinutes / 60;
+      const nightBonusTotal = nightBonusHours * 151.27;
+      const weekendBonusTotal = weekendBonusHours * 151.27;
+      
+      const earnings = baseEarnings + nightBonusTotal + weekendBonusTotal;
+      document.getElementById("liveEarnings").textContent = `Tjent hittil: ${earnings.toFixed(2)} kr`;
+    }
+    
+    // Kalkulerer total lønn, bonus og viser et detaljert regnestykke
+    function calculateWage() {
+      const startDate = document.getElementById("startDate").value;
+      const startTime = document.getElementById("startTime").value;
+      const endDate = document.getElementById("endDate").value;
+      const endTime = document.getElementById("endTime").value;
+      let baseRate = parseFloat(document.getElementById("hourlyRate").value);
+      
+      if (!startDate || !startTime || !endDate || !endTime) return;
+      
+      const start = new Date(`${startDate}T${startTime}`);
+      const end = new Date(`${endDate}T${endTime}`);
+      
+      if (end < start) return;
+      
+      const hoursWorked = (end - start) / (3600 * 1000);
+      const baseEarnings = hoursWorked * baseRate;
+      
+      const nightBonusMinutes = computeBonusMinutes(start, end, isNightBonus);
+      const weekendBonusMinutes = computeBonusMinutes(start, end, isWeekendBonus);
+      const nightBonusHours = nightBonusMinutes / 60;
+      const weekendBonusHours = weekendBonusMinutes / 60;
+      const nightBonusTotal = nightBonusHours * 151.27;
+      const weekendBonusTotal = weekendBonusHours * 151.27;
+      
+      const totalEarnings = baseEarnings + nightBonusTotal + weekendBonusTotal;
+      const effectiveHourlyRate = hoursWorked > 0 ? (totalEarnings / hoursWorked) : 0;
+      
+      // Oppdater bonusfeltene med farge
+      if (nightBonusTotal > 0) {
+        document.getElementById("nightBonus").textContent = `kr ${nightBonusTotal.toFixed(2)} - Kveldstillegg`;
+        document.getElementById("nightBonus").className = "box active";
+      } else {
+        document.getElementById("nightBonus").textContent = "kr 0 - Kveldstillegg";
+        document.getElementById("nightBonus").className = "box inactive";
+      }
+      
+      if (weekendBonusTotal > 0) {
+        document.getElementById("weekendBonus").textContent = `kr ${weekendBonusTotal.toFixed(2)} - Helgetillegg`;
+        document.getElementById("weekendBonus").className = "box active";
+      } else {
+        document.getElementById("weekendBonus").textContent = "kr 0 - Helgetillegg";
+        document.getElementById("weekendBonus").className = "box inactive";
+      }
+      
+      document.getElementById("totalEarnings").textContent = `Total lønn: ${totalEarnings.toFixed(2)} kr`;
+      document.getElementById("workDuration").textContent = `Vakttid: ${hoursWorked.toFixed(2)} timer`;
+      
+      // Lag et detaljert regnestykke med linjeskift
+      document.getElementById("calculationBreakdown").innerHTML = 
+        "Regnestykke:<br>" +
+        `Basis: (${hoursWorked.toFixed(2)} timer * ${baseRate} kr) = ${baseEarnings.toFixed(2)} kr<br>` +
+        `Kveldstillegg: ((${nightBonusMinutes} min / 60 = ${nightBonusHours.toFixed(2)} timer) * 151.27 kr) = ${nightBonusTotal.toFixed(2)} kr<br>` +
+        `Helgetillegg: ((${weekendBonusMinutes} min / 60 = ${weekendBonusHours.toFixed(2)} timer) * 151.27 kr) = ${weekendBonusTotal.toFixed(2)} kr<br>` +
+        `Sum: ${baseEarnings.toFixed(2)} + ${nightBonusTotal.toFixed(2)} + ${weekendBonusTotal.toFixed(2)} = ${totalEarnings.toFixed(2)} kr`;
+      
+      document.getElementById("effectiveHourlyRate").textContent = `Effektiv timelønn: ${effectiveHourlyRate.toFixed(2)} kr`;
+    }
+    
+    // Lytter til endringer i inputfeltene
+    document.getElementById("startDate").addEventListener("change", calculateWage);
+    document.getElementById("startTime").addEventListener("change", calculateWage);
+    document.getElementById("endDate").addEventListener("change", calculateWage);
+    document.getElementById("endTime").addEventListener("change", calculateWage);
+    document.getElementById("hourlyRate").addEventListener("input", calculateWage);
+    
+    // Oppdater klokken og live-inntekter hvert sekund
+    setInterval(updateClock, 1000);
+  </script>
 </body>
 </html>
