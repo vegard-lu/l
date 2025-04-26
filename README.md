@@ -1,8 +1,8 @@
-name: Keep Repository Active
+name: Automatisk Oppdatering av README Hver 10. Dag
 
 on:
   schedule:
-    - cron: '0 0 */89 * *' # Kjør hver 10. dag
+    - cron: '0 0 */10 * *' # Kjør klokken 00:00 UTC hver 10. dag
 
 jobs:
   update-readme:
@@ -11,14 +11,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Update README
+      - name: Oppdater README-fil
         run: |
-          echo "Automatisk oppdatering $(date)" >> README.md
+          echo "Sist oppdatert: $(date)" >> README.md
 
-      - name: Commit and push changes
+      - name: Commit og push endringer
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add README.md
-          git commit -m "Automatisk oppdatering for å holde repositoryet aktivt"
-          git push# G
+          git commit -m "Automatisk oppdatering av README for å holde repositoryet aktivt"
+          git push
